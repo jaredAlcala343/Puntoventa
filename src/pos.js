@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+
 import './style.css';
 
 const POS = () => {
@@ -10,6 +10,20 @@ const POS = () => {
     const [productName, setProductName] = useState('');
     const [quantity, setQuantity] = useState('');
     const [price, setPrice] = useState('');
+    const [editProductIndex, setEditProductIndex] = useState(null);
+
+    // Load transactions from localStorage when the component mounts
+    useEffect(() => {
+        const storedTransactions = localStorage.getItem('transactions');
+        if (storedTransactions) {
+            setTransactions(JSON.parse(storedTransactions));
+        }
+    }, []);
+
+    // Save transactions to localStorage whenever the transactions state changes
+    useEffect(() => {
+        localStorage.setItem('transactions', JSON.stringify(transactions));
+    }, [transactions]);
 
     const handleAddProduct = () => {
         const newProduct = {
@@ -18,10 +32,31 @@ const POS = () => {
             price: Number(price),
             total: Number(quantity) * Number(price),
         };
-        setCurrentTransaction([...currentTransaction, newProduct]);
+        if (editProductIndex !== null) {
+            const updatedTransaction = currentTransaction.map((product, index) =>
+                index === editProductIndex ? newProduct : product
+            );
+            setCurrentTransaction(updatedTransaction);
+            setEditProductIndex(null);
+        } else {
+            setCurrentTransaction([...currentTransaction, newProduct]);
+        }
         setProductName('');
         setQuantity('');
         setPrice('');
+    };
+
+    const handleEditProduct = (index) => {
+        const productToEdit = currentTransaction[index];
+        setProductName(productToEdit.productName);
+        setQuantity(productToEdit.quantity);
+        setPrice(productToEdit.price);
+        setEditProductIndex(index);
+    };
+
+    const handleDeleteProduct = (index) => {
+        const updatedTransaction = currentTransaction.filter((_, i) => i !== index);
+        setCurrentTransaction(updatedTransaction);
     };
 
     const handleSaveTransaction = () => {
@@ -72,28 +107,20 @@ const POS = () => {
             doc.text(`Cantidad: ${product.quantity}`, 10, yOffset + 10 + (index * 30));
             doc.text(`Precio: ${product.price}`, 10, yOffset + 20 + (index * 30));
             doc.text(`Total: ${product.total}`, 10, yOffset + 30 + (index * 30));
-            yOffset += 0; // Adjust y position for the next product
+            yOffset += 40; // Adjust y position for the next product
             totalAmount += product.total;
         });
 
-        yOffset += 50; // Space before printing total amount
+        yOffset += 10; // Space before printing total amount
         doc.text(`Total de la Transacción: ${totalAmount}`, 10, yOffset);
         doc.text(`Fecha: ${transaction.date}`, 10, yOffset + 10);
         doc.save(`ticket_${transaction.date.replace(/[: ]/g, '_')}.pdf`);
     };
 
-    const handleGenerateExcel = () => {
-        const flatTransactions = transactions.map(transaction => {
-            return transaction.products.map(product => ({
-                ...product,
-                date: transaction.date,
-            }));
-        }).flat();
-
-        const worksheet = XLSX.utils.json_to_sheet(flatTransactions);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Transacciones");
-        XLSX.writeFile(workbook, "reporte_transacciones.xlsx");
+    const handleCloseDay = () => {
+        handleGeneratePDF();
+        setTransactions([]);
+        localStorage.removeItem('transactions');
     };
 
     return (
@@ -124,10 +151,9 @@ const POS = () => {
                         onChange={(e) => setPrice(e.target.value)}
                     />
                 </div>
-                <button onClick={handleAddProduct}>Agregar Producto</button>
+                <button onClick={handleAddProduct}>{editProductIndex !== null ? 'Actualizar Producto' : 'Agregar Producto'}</button>
                 <button onClick={handleSaveTransaction}>Guardar Transacción</button>
-                <button onClick={handleGeneratePDF}>Generar PDF</button>
-                <button onClick={handleGenerateExcel}>Generar Excel</button>
+                <button onClick={handleCloseDay}>Cerrar Caja</button>
             </div>
             <h2>Productos en la Transacción Actual</h2>
             {currentTransaction.length === 0 ? (
@@ -140,6 +166,8 @@ const POS = () => {
                             <p><strong>Cantidad:</strong> {product.quantity}</p>
                             <p><strong>Precio:</strong> {product.price}</p>
                             <p><strong>Total:</strong> {product.total}</p>
+                            <button onClick={() => handleEditProduct(index)}>Editar</button>
+                            <button onClick={() => handleDeleteProduct(index)}>Eliminar</button>
                         </div>
                     ))}
                 </div>
