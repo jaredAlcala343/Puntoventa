@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
 import './style.css';
 
 const POS = () => {
@@ -12,7 +11,6 @@ const POS = () => {
     const [price, setPrice] = useState('');
     const [editProductIndex, setEditProductIndex] = useState(null);
 
-    // Load transactions from localStorage when the component mounts
     useEffect(() => {
         const storedTransactions = localStorage.getItem('transactions');
         if (storedTransactions) {
@@ -20,7 +18,6 @@ const POS = () => {
         }
     }, []);
 
-    // Save transactions to localStorage whenever the transactions state changes
     useEffect(() => {
         localStorage.setItem('transactions', JSON.stringify(transactions));
     }, [transactions]);
@@ -126,6 +123,52 @@ const POS = () => {
     return (
         <div className="container">
             <h1>Punto de Venta</h1>
+            <div className="main-content">
+                <div className="products">
+                    <h2>Productos en la Transacción Actual</h2>
+                    {currentTransaction.length === 0 ? (
+                        <p>No hay productos agregados.</p>
+                    ) : (
+                        <div className="transactions">
+                            {currentTransaction.map((product, index) => (
+                                <div key={index} className="transaction">
+                                    <p><strong>Producto:</strong> {product.productName}</p>
+                                    <p><strong>Cantidad:</strong> {product.quantity}</p>
+                                    <p><strong>Precio:</strong> {product.price}</p>
+                                    <p><strong>Total:</strong> {product.total}</p>
+                                    <button onClick={() => handleEditProduct(index)}>Editar</button>
+                                    <button onClick={() => handleDeleteProduct(index)}>Eliminar</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <div className="transactions-list">
+                    <h2>Transacciones</h2>
+                    {transactions.length === 0 ? (
+                        <p>No hay transacciones registradas.</p>
+                    ) : (
+                        <div className="transactions">
+                            {transactions.map((transaction, index) => (
+                                <div key={index} className="transaction">
+                                    <h3>Transacción {index + 1}</h3>
+                                    {transaction.products.map((product, productIndex) => (
+                                        <div key={productIndex}>
+                                            <p><strong>Producto:</strong> {product.productName}</p>
+                                            <p><strong>Cantidad:</strong> {product.quantity}</p>
+                                            <p><strong>Precio:</strong> {product.price}</p>
+                                            <p><strong>Total:</strong> {product.total}</p>
+                                        </div>
+                                    ))}
+                                    <p><strong>Total de la Transacción:</strong> {transaction.products.reduce((sum, product) => sum + product.total, 0)}</p>
+                                    <p><strong>Fecha:</strong> {transaction.date}</p>
+                                    <button onClick={() => handlePrintTicket(transaction)}>Imprimir Ticket</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
             <div className="form">
                 <div className="form-group">
                     <label>Nombre del Producto</label>
@@ -155,46 +198,9 @@ const POS = () => {
                 <button onClick={handleSaveTransaction}>Guardar Transacción</button>
                 <button onClick={handleCloseDay}>Cerrar Caja</button>
             </div>
-            <h2>Productos en la Transacción Actual</h2>
-            {currentTransaction.length === 0 ? (
-                <p>No hay productos agregados.</p>
-            ) : (
-                <div className="transactions">
-                    {currentTransaction.map((product, index) => (
-                        <div key={index} className="transaction">
-                            <p><strong>Producto:</strong> {product.productName}</p>
-                            <p><strong>Cantidad:</strong> {product.quantity}</p>
-                            <p><strong>Precio:</strong> {product.price}</p>
-                            <p><strong>Total:</strong> {product.total}</p>
-                            <button onClick={() => handleEditProduct(index)}>Editar</button>
-                            <button onClick={() => handleDeleteProduct(index)}>Eliminar</button>
-                        </div>
-                    ))}
-                </div>
-            )}
-            <h2>Transacciones</h2>
-            {transactions.length === 0 ? (
-                <p>No hay transacciones registradas.</p>
-            ) : (
-                <div className="transactions">
-                    {transactions.map((transaction, index) => (
-                        <div key={index} className="transaction">
-                            <h3>Transacción {index + 1}</h3>
-                            {transaction.products.map((product, productIndex) => (
-                                <div key={productIndex}>
-                                    <p><strong>Producto:</strong> {product.productName}</p>
-                                    <p><strong>Cantidad:</strong> {product.quantity}</p>
-                                    <p><strong>Precio:</strong> {product.price}</p>
-                                    <p><strong>Total:</strong> {product.total}</p>
-                                </div>
-                            ))}
-                            <p><strong>Total de la Transacción:</strong> {transaction.products.reduce((sum, product) => sum + product.total, 0)}</p>
-                            <p><strong>Fecha:</strong> {transaction.date}</p>
-                            <button onClick={() => handlePrintTicket(transaction)}>Imprimir Ticket</button>
-                        </div>
-                    ))}
-                </div>
-            )}
+            <footer>
+                <p>Desarrollada por KZ Studios. Derechos reservados 2024</p>
+            </footer>
         </div>
     );
 };
